@@ -13,15 +13,13 @@ This plugins adds a new `FinnishVoikkoTokenizer` in OmegaT. Because it relies on
 
 * The Voikko dictionnaries (which can be [downloaded there](https://www.puimula.org/htp/testing/voikko-snapshot-v5/)) must be placed in the `$HOME/.omegat/voikko/dicts` directory.
 
-Once everything is installed, open your project in OmegaT, select  Project / Properties / 
+Once everything is installed, open your project in OmegaT, select  Project / Properties / Source Language Tokenizer
 
-### Windows
+### Windows library install
 
 * Download the dll corresponding to your to you system (win32 or win64) from this page: https://www.puimula.org/htp/testing/voikko-sdk/win-crossbuild/libvoikko-4.1.1+win1/
    
 * Copy the `libvoikko-1.dll` file in the folder `%APPDATA%\OmegaT\voikko`.
-
-* Add the property `"-Djna.library.path=%APPDATA%\omegat\voikko"` to the OmegaT command line. 
 
 ## License
 
