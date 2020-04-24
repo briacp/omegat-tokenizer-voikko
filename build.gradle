@@ -32,6 +32,7 @@ dependencies {
 
     // Add external dependencies for the plugin
     //implementation 'org.apache.poi:poi-ooxml:4.1.0'
+    implementation 'org.puimula.voikko:libvoikko:4.1.1'
 
     compileDependencies.each {
         compileOnly it
