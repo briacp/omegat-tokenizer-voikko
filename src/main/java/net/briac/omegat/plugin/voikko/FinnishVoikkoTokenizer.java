@@ -15,9 +15,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
-package net.briac.omegat.plugin.tokenizer;
+package net.briac.omegat.plugin.voikko;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -25,61 +24,62 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
 import org.omegat.core.Core;
+import org.omegat.core.CoreEvents;
+import org.omegat.core.events.IApplicationEventListener;
 import org.omegat.filters2.master.PluginUtils;
+import org.omegat.gui.issues.IssueProviders;
 import org.omegat.tokenizer.DefaultTokenizer;
 import org.omegat.tokenizer.LuceneFinnishTokenizer;
 import org.omegat.tokenizer.Tokenizer;
-import org.omegat.util.StaticUtils;
 import org.omegat.util.StringUtil;
 import org.omegat.util.Token;
 import org.puimula.libvoikko.Analysis;
 import org.puimula.libvoikko.TokenType;
 import org.puimula.libvoikko.Voikko;
 
+
 @Tokenizer(languages = { "fi" }, isDefault = true)
 public class FinnishVoikkoTokenizer extends DefaultTokenizer {
-    private static final File VOIKKO_DIRECTORY = new File(StaticUtils.getConfigDir(), "voikko");
-    private static final File DICTS_DIRECTORY = new File(VOIKKO_DIRECTORY, "dicts");
-    private static final Logger LOGGER = Logger.getLogger(FinnishVoikkoTokenizer.class.getName());
-    private static final String PLUGIN_NAME = FinnishVoikkoTokenizer.class.getPackage().getImplementationTitle();
-    private static final String PLUGIN_VERSION = FinnishVoikkoTokenizer.class.getPackage().getImplementationVersion();
 
-    private static final String FINNISH_LANGUAGE_CODE = "fi";
-    private static final String[] SUPPORTED_LANGUAGES = new String[] { FINNISH_LANGUAGE_CODE };
+    private static final Logger LOGGER = Logger.getLogger(FinnishVoikkoTokenizer.class.getName());
 
     private final Map<String, Token[]> tokenCacheNone = new ConcurrentHashMap<>(2500);
     private final Map<String, Token[]> tokenCacheMatching = new ConcurrentHashMap<>(2500);
     private final Map<String, Token[]> tokenCacheGlossary = new ConcurrentHashMap<>(2500);
 
-    protected static final String[] EMPTY_STRING_LIST = new String[0];
-    protected static final Token[] EMPTY_TOKENS_LIST = new Token[0];
-    protected static final int DEFAULT_TOKENS_COUNT = 64;
+    private static final String[] EMPTY_STRING_LIST = new String[0];
+    private static final Token[] EMPTY_TOKENS_LIST = new Token[0];
 
-    private final Voikko voikko;
-    
+
     static {
-        if (System.getProperty("jna.library.path") == null) {
-            System.setProperty("jna.library.path", VOIKKO_DIRECTORY.getAbsolutePath());
-        }
+        Core.registerMarkerClass(VoikkoGrammarCheck.class);
+        Core.registerMarkerClass(VoikkoSpellCheck.class);
     }
 
     public static void loadPlugins() {
-        Core.registerTokenizerClass(FinnishVoikkoTokenizer.class);
 
-        // Remove LuceneFinnishTokenizer as the default tokenizer
-        PluginUtils.getTokenizerClasses().remove(LuceneFinnishTokenizer.class);
+        CoreEvents.registerApplicationEventListener(new IApplicationEventListener() {
+            @Override
+            public void onApplicationStartup() {
+                Core.registerTokenizerClass(FinnishVoikkoTokenizer.class);
+                // Remove LuceneFinnishTokenizer as the default tokenizer
+                PluginUtils.getTokenizerClasses().remove(LuceneFinnishTokenizer.class);
+                
+                //PreferencesControllers.addSupplier(GrammalectePrefsController::new);
+                IssueProviders.addIssueProvider(new VoikkoGrammarCheck());
+                //IssueProviders.addIssueProvider(new VoikkoSpellCheck());
+            }
+
+            @Override
+            public void onApplicationShutdown() {
+                /* empty */
+            }
+        });
     }
 
     public static void unloadPlugins() {
-        /* empty */
     }
 
-    public FinnishVoikkoTokenizer() {
-        super();
-        LOGGER.info("Loading " + PLUGIN_NAME + " v." + PLUGIN_VERSION + " (Voikko directory: "
-                + VOIKKO_DIRECTORY.getAbsolutePath() + ")");
-        voikko = new Voikko(SUPPORTED_LANGUAGES[0], DICTS_DIRECTORY.getAbsolutePath());
-    }
 
     /**
      * {@inheritDoc}
@@ -151,7 +151,7 @@ public class FinnishVoikkoTokenizer extends DefaultTokenizer {
      */
     @Override
     public String[] getSupportedLanguages() {
-        return SUPPORTED_LANGUAGES;
+        return VoikkoInstance.SUPPORTED_LANGUAGES;
     }
 
     private Token[] tokenize(final String strOrig, final boolean stemsAllowed, final boolean stopWordsAllowed,
@@ -161,12 +161,15 @@ public class FinnishVoikkoTokenizer extends DefaultTokenizer {
         }
 
         List<Token> result = new ArrayList<>(64);
-
+        
+        Voikko voikko = VoikkoInstance.getInstance().getVoikko();
+        LOGGER.finest("tokenize\t" + strOrig);
         for (org.puimula.libvoikko.Token token : voikko.tokens(strOrig)) {
             if (acceptToken(token, filterDigits, filterWhitespace)) {
                 if (stemsAllowed) {
                     for (Analysis analysis : voikko.analyze(token.getText())) {
                         if (analysis.containsKey("BASEFORM")) {
+                            LOGGER.finest(token.getText() + "\t=>\t" + analysis.get("BASEFORM"));
                             result.add(new Token(analysis.get("BASEFORM"), token.getStartOffset(),
                                     token.getEndOffset() - token.getStartOffset()));
                         }
@@ -209,12 +212,14 @@ public class FinnishVoikkoTokenizer extends DefaultTokenizer {
         }
 
         List<String> result = new ArrayList<>(64);
-
+        LOGGER.finest("tokenizeToStrings\t" + str);
+        Voikko voikko = VoikkoInstance.getInstance().getVoikko();
         for (org.puimula.libvoikko.Token token : voikko.tokens(str)) {
             if (acceptToken(token, filterDigits, filterWhitespace)) {
                 if (stemsAllowed) {
                     for (Analysis analysis : voikko.analyze(token.getText())) {
                         if (analysis.containsKey("BASEFORM")) {
+                            LOGGER.fine(token.getText() + "\t=>\t" + analysis.get("BASEFORM"));
                             result.add(analysis.get("BASEFORM"));
                         }
                     }

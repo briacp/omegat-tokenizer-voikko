@@ -4,6 +4,8 @@
 
 This plugins adds a new `FinnishVoikkoTokenizer` in OmegaT. Because it relies on the [Voikko](https://voikko.puimula.org/) library it should gives more accurate tokenization than the default OmegaT tokenizer.
 
+It also includes Grammar verification and spellchecking. 
+
 
 ## Installation
 
