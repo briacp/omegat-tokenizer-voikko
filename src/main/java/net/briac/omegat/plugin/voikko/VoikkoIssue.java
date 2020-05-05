@@ -40,7 +40,6 @@ import org.omegat.core.data.SourceTextEntry;
 import org.omegat.gui.issues.IIssue;
 import org.omegat.gui.issues.IssueDetailSplitPanel;
 import org.omegat.gui.issues.SimpleColorIcon;
-import org.omegat.util.Token;
 import org.omegat.util.gui.Styles.EditorColor;
 import org.puimula.libvoikko.GrammarError;
 
@@ -62,7 +61,7 @@ class VoikkoIssue implements IIssue {
     VoikkoIssue(SourceTextEntry ste, String targetText, GrammarError match) {
         this.ste = ste;
         this.targetText = targetText;
-        this.result = match;
+        result = match;
     }
 
     @Override
@@ -106,7 +105,7 @@ class VoikkoIssue implements IIssue {
         doc.setCharacterAttributes(result.getStartPos(), result.getErrorLen(), ERROR_STYLE, false);
         panel.setMinimumSize(new Dimension(0, panel.firstTextPane.getFont().getSize() * 6));
         return panel;
-        
+
     }
 
     @Override

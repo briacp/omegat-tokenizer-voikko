@@ -1,5 +1,5 @@
 /**************************************************************************
-Voikko Finnish Tokenizer for OmegaT
+Voikko Tokenizer for OmegaT
 Copyright (C) 2020 Briac Pilpre
 
 This program is free software: you can redistribute it and/or modify
@@ -86,11 +86,11 @@ public class VoikkoGrammarCheck implements IIssueProvider, IMarker {
     protected List<GrammarError> getCheckResults(String sourceText, String translationText) throws Exception {
         String targetLang = Core.getProject().getProjectProperties().getTargetLanguage().getLanguageCode();
 
-        if (targetLang == null || !targetLang.equalsIgnoreCase(VoikkoInstance.FINNISH_LANGUAGE_CODE)) {
+        if (targetLang == null || !VoikkoInstance.isLanguageSupported(targetLang)) {
             return Collections.emptyList();
         }
 
-        return VoikkoInstance.getInstance().getVoikko().grammarErrors(translationText, ERROR_MESSAGE_LOCALE);
+        return VoikkoInstance.getVoikko(targetLang).grammarErrors(translationText, ERROR_MESSAGE_LOCALE);
     }
 
 }

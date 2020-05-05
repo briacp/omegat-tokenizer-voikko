@@ -1,5 +1,5 @@
 /**************************************************************************
-Voikko Finnish Tokenizer for OmegaT
+Voikko Tokenizer for OmegaT
 Copyright (C) 2020 Briac Pilpre
 
 This program is free software: you can redistribute it and/or modify
@@ -37,11 +37,10 @@ import org.puimula.libvoikko.Analysis;
 import org.puimula.libvoikko.TokenType;
 import org.puimula.libvoikko.Voikko;
 
+@Tokenizer(languages = Tokenizer.DISCOVER_AT_RUNTIME, isDefault = true)
+public class VoikkoTokenizer extends DefaultTokenizer {
 
-@Tokenizer(languages = { "fi" }, isDefault = true)
-public class FinnishVoikkoTokenizer extends DefaultTokenizer {
-
-    private static final Logger LOGGER = Logger.getLogger(FinnishVoikkoTokenizer.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(VoikkoTokenizer.class.getName());
 
     private final Map<String, Token[]> tokenCacheNone = new ConcurrentHashMap<>(2500);
     private final Map<String, Token[]> tokenCacheMatching = new ConcurrentHashMap<>(2500);
@@ -50,10 +49,8 @@ public class FinnishVoikkoTokenizer extends DefaultTokenizer {
     private static final String[] EMPTY_STRING_LIST = new String[0];
     private static final Token[] EMPTY_TOKENS_LIST = new Token[0];
 
-
     static {
         Core.registerMarkerClass(VoikkoGrammarCheck.class);
-        Core.registerMarkerClass(VoikkoSpellCheck.class);
     }
 
     public static void loadPlugins() {
@@ -61,13 +58,12 @@ public class FinnishVoikkoTokenizer extends DefaultTokenizer {
         CoreEvents.registerApplicationEventListener(new IApplicationEventListener() {
             @Override
             public void onApplicationStartup() {
-                Core.registerTokenizerClass(FinnishVoikkoTokenizer.class);
+                Core.registerTokenizerClass(VoikkoTokenizer.class);
+                Core.registerSpellCheckClass(VoikkoSpellCheck.class);
                 // Remove LuceneFinnishTokenizer as the default tokenizer
                 PluginUtils.getTokenizerClasses().remove(LuceneFinnishTokenizer.class);
-                
-                //PreferencesControllers.addSupplier(GrammalectePrefsController::new);
+
                 IssueProviders.addIssueProvider(new VoikkoGrammarCheck());
-                //IssueProviders.addIssueProvider(new VoikkoSpellCheck());
             }
 
             @Override
@@ -79,7 +75,6 @@ public class FinnishVoikkoTokenizer extends DefaultTokenizer {
 
     public static void unloadPlugins() {
     }
-
 
     /**
      * {@inheritDoc}
@@ -151,7 +146,7 @@ public class FinnishVoikkoTokenizer extends DefaultTokenizer {
      */
     @Override
     public String[] getSupportedLanguages() {
-        return VoikkoInstance.SUPPORTED_LANGUAGES;
+        return VoikkoInstance.getSupportedLanguages().toArray(String[]::new);
     }
 
     private Token[] tokenize(final String strOrig, final boolean stemsAllowed, final boolean stopWordsAllowed,
@@ -161,8 +156,9 @@ public class FinnishVoikkoTokenizer extends DefaultTokenizer {
         }
 
         List<Token> result = new ArrayList<>(64);
-        
-        Voikko voikko = VoikkoInstance.getInstance().getVoikko();
+
+        String targetLang = Core.getProject().getProjectProperties().getTargetLanguage().getLanguageCode();
+        Voikko voikko = VoikkoInstance.getVoikko(targetLang);
         LOGGER.finest("tokenize\t" + strOrig);
         for (org.puimula.libvoikko.Token token : voikko.tokens(strOrig)) {
             if (acceptToken(token, filterDigits, filterWhitespace)) {
@@ -213,7 +209,8 @@ public class FinnishVoikkoTokenizer extends DefaultTokenizer {
 
         List<String> result = new ArrayList<>(64);
         LOGGER.finest("tokenizeToStrings\t" + str);
-        Voikko voikko = VoikkoInstance.getInstance().getVoikko();
+        String targetLang = Core.getProject().getProjectProperties().getTargetLanguage().getLanguageCode();
+        Voikko voikko = VoikkoInstance.getVoikko(targetLang);
         for (org.puimula.libvoikko.Token token : voikko.tokens(str)) {
             if (acceptToken(token, filterDigits, filterWhitespace)) {
                 if (stemsAllowed) {
